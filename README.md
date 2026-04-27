@@ -132,17 +132,33 @@ docker compose up -d
 テスト実行:
 
 ```bash
-docker compose exec -T -e MIX_ENV=test web /bin/bash -lc "cd tubuyaki && mix test"
+docker compose exec -T -e MIX_ENV=test web /bin/bash -lc "mix test"
 ```
+
+このコマンドはテストを実行するだけで、ブラウザ画面は更新しません。
 
 format:
 
 ```bash
-docker compose exec -T web /bin/bash -lc "cd tubuyaki && mix format"
+docker compose exec -T web /bin/bash -lc "mix format"
 ```
+
+このコマンドはコード整形だけを行うため、ブラウザ画面は更新しません。
 
 手動 migration:
 
 ```bash
-docker compose exec -T web /bin/bash -lc "cd tubuyaki && mix ecto.migrate"
+docker compose exec -T web /bin/bash -lc "mix ecto.migrate"
 ```
+
+このコマンドは DB 構造を更新するためのものです。画面表示を確認する場合は、`docker compose up -d` で `web` が起動していることを確認し、ブラウザで http://127.0.0.1:4000/tweet を再読み込みしてください。投稿フォームはログイン後に表示されます。
+
+開発 DB 初期化:
+
+```bash
+docker compose stop web
+docker compose run --rm web /bin/bash -lc "mix ecto.reset"
+docker compose up -d web
+```
+
+このコマンドは開発用 DB を作り直すため、登録済みユーザー、つぶやき、いいね、画像レコードは削除されます。アップロード済み画像ファイル自体は `apps/tubuyaki/priv/static/uploads` に残る場合があります。
