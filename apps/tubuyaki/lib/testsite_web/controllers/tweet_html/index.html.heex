@@ -43,7 +43,17 @@
             label="いまどうしてる？"
             placeholder="255文字以内で入力"
           />
-          <.input field={@form[:images]} type="file" label="画像" multiple accept="image/*" />
+          <div>
+            <label class="label" for="tweet_images">画像</label>
+            <input
+              id="tweet_images"
+              class="file-input w-full"
+              type="file"
+              name="tweet[images][]"
+              multiple
+              accept="image/*"
+            />
+          </div>
           <div class="flex justify-end">
             <button class="btn btn-primary" type="submit">投稿</button>
           </div>

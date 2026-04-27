@@ -9,6 +9,15 @@ defmodule TestsiteWeb.TweetControllerTest do
     assert html_response(conn, 200) =~ "つぶやきアプリ"
   end
 
+  test "GET /tweet renders the tweet form for logged-in users", %{conn: conn} do
+    user = user_fixture()
+    conn = Plug.Test.init_test_session(conn, user_id: user.id)
+
+    conn = get(conn, ~p"/tweet")
+
+    assert html_response(conn, 200) =~ "いまどうしてる？"
+  end
+
   test "POST /tweet creates a tweet", %{conn: conn} do
     user = user_fixture()
     conn = Plug.Test.init_test_session(conn, user_id: user.id)
