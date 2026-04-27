@@ -123,12 +123,6 @@ web コンテナに入る:
 docker compose exec web /bin/bash
 ```
 
-Phoenix サーバー起動:
-
-```bash
-docker compose up -d
-```
-
 テスト実行:
 
 ```bash
