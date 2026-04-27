@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:12.6
+    volumes:
+      - ./data/postgres/volume:/var/lib/postgresql/data:cached
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: >
+      sh -lc "mix deps.get
+      && mix ecto.create
+      && mix ecto.migrate
+      && mix phx.server"
+    environment:
+      MIX_ENV: "dev"
+      PORT: "4000"
+    volumes:
+      - ./apps:/apps
+    working_dir: /apps/tubuyaki
+    ports:
+      - "4000:4000"
+    tty: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  adminer:
+    image: adminer:4.8.0
+    ports:
+      - "${ADMINER_PORT:-8082}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
