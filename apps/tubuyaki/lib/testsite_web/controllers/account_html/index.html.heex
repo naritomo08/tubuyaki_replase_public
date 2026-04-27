@@ -1,0 +1,76 @@
+<Layouts.flash_group flash={@flash} />
+
+<main class="min-h-screen bg-base-200 px-4 py-6">
+  <div class="mx-auto max-w-3xl space-y-5">
+    <header class="flex items-center justify-between border-b border-base-300 pb-5">
+      <div>
+        <p class="text-sm font-semibold text-secondary">Account</p>
+        <h1 class="text-3xl font-bold">アカウント</h1>
+      </div>
+      <a class="btn btn-ghost" href={~p"/tweet"}>戻る</a>
+    </header>
+
+    <section class="grid gap-3 sm:grid-cols-2">
+      <div class="rounded-lg border border-base-300 bg-base-100 p-4">
+        <p class="text-sm text-base-content/60">あなたの投稿</p>
+        <p class="text-3xl font-bold">{@stats.tweet_count}</p>
+      </div>
+      <div class="rounded-lg border border-base-300 bg-base-100 p-4">
+        <p class="text-sm text-base-content/60">もらったいいね</p>
+        <p class="text-3xl font-bold">{@stats.like_count}</p>
+      </div>
+    </section>
+
+    <section class="rounded-lg border border-base-300 bg-base-100 p-4">
+      <h2 class="mb-3 text-xl font-bold">プロフィール</h2>
+      <.form for={@profile_form} action={~p"/account/profile"} method="put" class="space-y-3">
+        <.input field={@profile_form[:name]} label="ユーザー名" required />
+        <.input field={@profile_form[:email]} type="email" label="メールアドレス" required />
+        <button class="btn btn-primary" type="submit">保存</button>
+      </.form>
+    </section>
+
+    <section class="rounded-lg border border-base-300 bg-base-100 p-4">
+      <h2 class="mb-3 text-xl font-bold">パスワード</h2>
+      <.form for={@password_form} action={~p"/account/password"} method="put" class="space-y-3">
+        <.input
+          field={@password_form[:current_password]}
+          type="password"
+          label="現在のパスワード"
+          required
+        />
+        <.input
+          field={@password_form[:password]}
+          type="password"
+          label="新しいパスワード"
+          required
+        />
+        <button class="btn btn-primary" type="submit">変更</button>
+      </.form>
+    </section>
+
+    <section class="rounded-lg border border-base-300 bg-base-100 p-4">
+      <h2 class="mb-3 text-xl font-bold">Google連携</h2>
+      <a class="btn btn-ghost" href={~p"/account/google/connect"}>Googleアカウントを連携</a>
+    </section>
+
+    <section class="rounded-lg border border-error/40 bg-base-100 p-4">
+      <h2 class="mb-3 text-xl font-bold text-error">退会</h2>
+      <.form
+        for={Phoenix.Component.to_form(%{}, as: :user)}
+        action={~p"/account"}
+        method="delete"
+        class="flex flex-col gap-3 sm:flex-row"
+      >
+        <input
+          class="input flex-1"
+          type="password"
+          name="user[current_password]"
+          placeholder="現在のパスワード"
+          required
+        />
+        <button class="btn btn-error" type="submit">アカウント削除</button>
+      </.form>
+    </section>
+  </div>
+</main>

@@ -1,0 +1,16 @@
+<Layouts.flash_group flash={@flash} />
+
+<main class="min-h-screen bg-base-200 px-4 py-10">
+  <section class="mx-auto max-w-md rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
+    <h1 class="mb-5 text-2xl font-bold">アカウント登録</h1>
+    <.form for={@form} action={~p"/register"} class="space-y-3">
+      <.input field={@form[:name]} label="ユーザー名" required />
+      <.input field={@form[:email]} type="email" label="メールアドレス" required />
+      <.input field={@form[:password]} type="password" label="パスワード" required />
+      <button class="btn btn-primary w-full" type="submit">登録</button>
+    </.form>
+    <p class="mt-4 text-sm">
+      <a class="link" href={~p"/login"}>ログインへ戻る</a>
+    </p>
+  </section>
+</main>
