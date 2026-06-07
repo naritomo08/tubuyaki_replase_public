@@ -3,6 +3,7 @@ defmodule Testsite.Microblog do
 
   alias Testsite.Repo
   alias Testsite.Microblog.{Image, Like, Tweet, User}
+  alias Testsite.DateTime, as: AppDateTime
 
   @demo_user_email "demo@example.com"
   @per_page 50
@@ -49,6 +50,49 @@ defmodule Testsite.Microblog do
     |> preload([:user, :images])
     |> Repo.all()
     |> attach_like_state(current_user && current_user.id)
+  end
+
+  def latest_tweets(current_user, limit \\ 20) do
+    Tweet
+    |> visible_to(current_user)
+    |> order_by([t], desc: fragment("COALESCE(?, ?)", t.scheduled_at, t.inserted_at), desc: t.id)
+    |> limit(^limit)
+    |> preload([:user, :images])
+    |> Repo.all()
+    |> attach_like_state(current_user && current_user.id)
+  end
+
+  def like_status(tweet_ids, current_user) do
+    tweet_ids = Enum.map(tweet_ids, &parse_positive_integer(&1, 0)) |> Enum.reject(&(&1 == 0))
+
+    like_counts =
+      Like
+      |> where([l], l.tweet_id in ^tweet_ids)
+      |> group_by([l], l.tweet_id)
+      |> select([l], {l.tweet_id, count(l.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    liked_tweet_ids =
+      case current_user do
+        %User{} ->
+          Like
+          |> where([l], l.user_id == ^current_user.id and l.tweet_id in ^tweet_ids)
+          |> select([l], l.tweet_id)
+          |> Repo.all()
+          |> MapSet.new()
+
+        _ ->
+          MapSet.new()
+      end
+
+    Enum.map(tweet_ids, fn tweet_id ->
+      %{
+        tweet_id: tweet_id,
+        like_count: Map.get(like_counts, tweet_id, 0),
+        liked: MapSet.member?(liked_tweet_ids, tweet_id)
+      }
+    end)
   end
 
   def list_scheduled_tweets(%User{} = user) do
@@ -260,22 +304,7 @@ defmodule Testsite.Microblog do
     Map.put(attrs, "scheduled_at", scheduled_at)
   end
 
-  defp parse_datetime(nil), do: nil
-  defp parse_datetime(""), do: nil
-  defp parse_datetime(%DateTime{} = datetime), do: datetime
-  defp parse_datetime(%NaiveDateTime{} = datetime), do: DateTime.from_naive!(datetime, "Etc/UTC")
-
-  defp parse_datetime(value) when is_binary(value) do
-    value = String.trim(value)
-
-    with {:error, _} <- DateTime.from_iso8601(value),
-         {:ok, naive_datetime} <- NaiveDateTime.from_iso8601(value <> ":00") do
-      DateTime.from_naive!(naive_datetime, "Etc/UTC")
-    else
-      {:ok, datetime, _offset} -> datetime
-      _ -> nil
-    end
-  end
+  defp parse_datetime(value), do: AppDateTime.from_jst_datetime_local(value)
 
   defp save_images(_tweet, []), do: :ok
   defp save_images(_tweet, nil), do: :ok

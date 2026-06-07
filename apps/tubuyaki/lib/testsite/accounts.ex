@@ -91,6 +91,26 @@ defmodule Testsite.Accounts do
     |> Repo.update()
   end
 
+  def update_mail_settings(%User{} = user, attrs) do
+    receives_notification_mail =
+      Map.get(attrs, "receives_notification_mail") in [true, "true", "1", 1, "on"]
+
+    user
+    |> Ecto.Changeset.change(receives_notification_mail: receives_notification_mail)
+    |> Repo.update()
+  end
+
+  def disconnect_google(%User{} = user) do
+    user
+    |> Ecto.Changeset.change(
+      google_id: nil,
+      google_email: nil,
+      google_avatar: nil,
+      google_connected_at: nil
+    )
+    |> Repo.update()
+  end
+
   def verify_email(%User{} = user) do
     user
     |> User.verify_email_changeset()
@@ -110,6 +130,9 @@ defmodule Testsite.Accounts do
     |> Ecto.Changeset.change(deletion_requested_at: DateTime.utc_now(:second))
     |> Repo.update()
   end
+
+  def pending_deletion?(%User{} = user), do: not is_nil(user.deletion_requested_at)
+  def pending_deletion?(_user), do: false
 
   def hash_password(password) do
     salt = :crypto.strong_rand_bytes(@salt_bytes)

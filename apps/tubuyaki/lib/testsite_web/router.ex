@@ -3,7 +3,7 @@ defmodule TestsiteWeb.Router do
   import TestsiteWeb.UserAuth
 
   pipeline :browser do
-    plug :accepts, ["html"]
+    plug :accepts, ["html", "json"]
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {TestsiteWeb.Layouts, :root}
@@ -32,6 +32,8 @@ defmodule TestsiteWeb.Router do
     get "/privacy", LegalDocumentController, :privacy
     get "/health", PageController, :health
     get "/tweet", TweetController, :index
+    get "/tweet/latest", TweetController, :latest
+    get "/like/status", TweetController, :like_status
     get "/login", AuthController, :new
     post "/login", AuthController, :create
     get "/register", AuthController, :register
@@ -53,8 +55,13 @@ defmodule TestsiteWeb.Router do
     get "/contact", ContactController, :create
     post "/contact", ContactController, :store
     get "/account", AccountController, :index
+    get "/account/admin-status", AccountController, :admin_status
+    get "/account/stats", AccountController, :stats
+    get "/account/scheduled-tweets", AccountController, :scheduled_tweets
     put "/account/profile", AccountController, :update_profile
+    put "/account/mail-settings", AccountController, :update_mail_settings
     put "/account/password", AccountController, :update_password
+    delete "/account/google", AccountController, :disconnect_google
     delete "/account", AccountController, :delete
     get "/account/google/connect", AuthController, :google_unconfigured
   end
@@ -63,6 +70,9 @@ defmodule TestsiteWeb.Router do
     pipe_through [:browser, :authenticated, :admin]
 
     get "/users", AdminUserController, :index
+    get "/users/stats", AdminUserController, :stats
+    get "/users/list", AdminUserController, :list_users
+    get "/users/scheduled-tweets", AdminUserController, :scheduled_tweets
     put "/users/:id/email", AdminUserController, :update_email
     delete "/users/:id", AdminUserController, :delete
   end

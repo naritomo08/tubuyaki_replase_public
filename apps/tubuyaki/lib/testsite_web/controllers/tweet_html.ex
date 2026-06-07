@@ -6,6 +6,6 @@ defmodule TestsiteWeb.TweetHTML do
   def format_datetime(nil), do: ""
 
   def format_datetime(datetime) do
-    Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
+    Testsite.DateTime.format_jst(datetime)
   end
 end

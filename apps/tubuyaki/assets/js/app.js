@@ -46,6 +46,317 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
+const refreshIntervalMs = 5000
+const refreshTimers = []
+
+const escapeHtml = value =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+
+const formatDateTime = value => {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+
+  const pad = number => String(number).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const fetchJson = async url => {
+  const nextUrl = new URL(url, window.location.origin)
+  nextUrl.searchParams.set("_", Date.now())
+
+  const response = await fetch(nextUrl, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: {"accept": "application/json"},
+  })
+
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
+
+const stopDynamicRefresh = () => {
+  while (refreshTimers.length > 0) {
+    window.clearInterval(refreshTimers.pop())
+  }
+}
+
+const withPolling = callback => {
+  const run = () => {
+    if (document.visibilityState === "visible") callback().catch(() => {})
+  }
+
+  run()
+  const timer = window.setInterval(run, refreshIntervalMs)
+  refreshTimers.push(timer)
+  return timer
+}
+
+const renderTweetImages = images => {
+  if (!images || images.length === 0) return ""
+
+  return `
+    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      ${images.map(image => `
+        <img class="aspect-square rounded object-cover" src="${escapeHtml(image.url)}" alt="" />
+      `).join("")}
+    </div>
+  `
+}
+
+const renderTweetBadges = tweet => {
+  const badges = []
+  if (tweet.is_secret) badges.push('<span class="badge badge-warning badge-sm">秘密</span>')
+  if (tweet.is_protected) badges.push('<span class="badge badge-info badge-sm">保護</span>')
+  if (tweet.scheduled_at) {
+    badges.push(`<span class="badge badge-outline badge-sm">予約 ${escapeHtml(formatDateTime(tweet.scheduled_at))}</span>`)
+  }
+  return badges.join("")
+}
+
+const renderTweetActions = (feed, tweet) => {
+  const authenticated = feed.dataset.authenticated === "true"
+  const currentUserId = Number(feed.dataset.currentUserId)
+  const isAdmin = feed.dataset.isAdmin === "true"
+  const canManage = authenticated && (isAdmin || currentUserId === tweet.user.id)
+
+  const likeButton = authenticated
+    ? `
+      <form action="/tweet/${tweet.id}/like" method="post">
+        <input type="hidden" name="_csrf_token" value="${escapeHtml(csrfToken)}" />
+        <button class="btn btn-sm gap-1 ${tweet.liked ? "btn-error" : "btn-ghost"}" type="submit" title="いいね">
+          <span aria-hidden="true">♡</span>
+          <span data-like-count>${tweet.like_count}</span>
+        </button>
+      </form>
+    `
+    : `
+      <span class="btn btn-sm btn-ghost gap-1 pointer-events-none">
+        <span aria-hidden="true">♡</span>
+        <span data-like-count>${tweet.like_count}</span>
+      </span>
+    `
+
+  const manageButtons = canManage
+    ? `
+      <a class="btn btn-sm btn-ghost" href="/tweet/${tweet.id}/edit">編集</a>
+      <form action="/tweet/${tweet.id}" method="post">
+        <input type="hidden" name="_method" value="delete" />
+        <input type="hidden" name="_csrf_token" value="${escapeHtml(csrfToken)}" />
+        <button class="btn btn-sm btn-ghost text-error" type="submit">削除</button>
+      </form>
+    `
+    : ""
+
+  return `<div class="flex shrink-0 items-center gap-2">${likeButton}${manageButtons}</div>`
+}
+
+const renderTweet = (feed, tweet) => `
+  <li class="p-4" data-tweet-id="${tweet.id}">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0 flex-1">
+        <div class="mb-2 flex flex-wrap items-center gap-2">
+          <span class="rounded-full bg-base-200 px-2 py-1 text-xs font-semibold">
+            ${escapeHtml(tweet.user.name)}
+          </span>
+          <span class="text-xs text-base-content/50">
+            ${escapeHtml(formatDateTime(tweet.inserted_at))}
+          </span>
+          ${renderTweetBadges(tweet)}
+        </div>
+        <p class="whitespace-pre-wrap break-words leading-7">${escapeHtml(tweet.content)}</p>
+        ${renderTweetImages(tweet.images)}
+      </div>
+      ${renderTweetActions(feed, tweet)}
+    </div>
+  </li>
+`
+
+const refreshTweetFeed = async feed => {
+  const data = await fetchJson(feed.dataset.latestUrl)
+  const tweets = data.tweets || []
+
+  if (tweets.length === 0) {
+    feed.innerHTML = '<p class="p-8 text-center text-base-content/60" data-tweet-empty>まだ投稿がありません。</p>'
+    document.querySelector("[data-tweet-total-count]").textContent = data.total_count || 0
+    return
+  }
+
+  document.querySelector("[data-tweet-total-count]").textContent = data.total_count ?? tweets.length
+  feed.innerHTML = `<ul class="divide-y divide-base-300" data-tweet-list>${tweets.map(tweet => renderTweet(feed, tweet)).join("")}</ul>`
+}
+
+const initTweetFeedRefresh = () => {
+  const feed = document.querySelector("[data-tweet-feed='true']")
+  if (!feed) return
+
+  withPolling(() => refreshTweetFeed(feed))
+}
+
+const renderAccountScheduledRows = tweets => {
+  if (!tweets || tweets.length === 0) {
+    return '<tr><td colspan="3" class="text-base-content/60">予約投稿はありません。</td></tr>'
+  }
+
+  return tweets.map(tweet => `
+    <tr>
+      <td class="max-w-sm truncate">${escapeHtml(tweet.content)}</td>
+      <td>${escapeHtml(formatDateTime(tweet.scheduled_at))}</td>
+      <td><a class="btn btn-sm btn-ghost" href="${escapeHtml(tweet.edit_url)}">編集</a></td>
+    </tr>
+  `).join("")
+}
+
+const initAccountRefresh = () => {
+  const dashboard = document.querySelector("[data-account-dashboard]")
+  if (!dashboard) return
+
+  withPolling(async () => {
+    const [stats, scheduled] = await Promise.all([
+      fetchJson(dashboard.dataset.statsUrl),
+      fetchJson(dashboard.dataset.scheduledUrl),
+    ])
+
+    document.querySelector("[data-account-tweet-count]").textContent = stats.tweet_count
+    document.querySelector("[data-account-like-count]").textContent = stats.like_count
+
+    const scheduledBody = document.querySelector("[data-account-scheduled-body]")
+    if (scheduledBody) scheduledBody.innerHTML = renderAccountScheduledRows(scheduled.scheduled_tweets)
+  })
+}
+
+const renderAdminScheduledRows = tweets => {
+  if (!tweets || tweets.length === 0) {
+    return '<tr><td colspan="4" class="text-base-content/60">予約投稿はありません。</td></tr>'
+  }
+
+  return tweets.map(tweet => `
+    <tr>
+      <td>${escapeHtml(tweet.user.name)}</td>
+      <td class="max-w-md truncate">${escapeHtml(tweet.content)}</td>
+      <td>${escapeHtml(formatDateTime(tweet.scheduled_at))}</td>
+      <td><a class="btn btn-sm btn-ghost" href="${escapeHtml(tweet.edit_url)}">編集</a></td>
+    </tr>
+  `).join("")
+}
+
+const renderAdminUserRows = users => users.map(user => `
+  <tr>
+    <td>
+      <span class="font-semibold">${escapeHtml(user.name)}</span>
+      ${user.is_admin ? '<span class="badge badge-primary ml-2">admin</span>' : ""}
+      ${user.deletion_requested ? '<span class="badge badge-warning ml-2">削除予定</span>' : ""}
+    </td>
+    <td>
+      <form action="/admin/users/${user.id}/email" method="post" class="flex min-w-72 gap-2">
+        <input type="hidden" name="_method" value="put" />
+        <input type="hidden" name="_csrf_token" value="${escapeHtml(csrfToken)}" />
+        <input class="input input-sm flex-1" name="user[email]" value="${escapeHtml(user.email)}" />
+        <button class="btn btn-sm" type="submit">保存</button>
+      </form>
+    </td>
+    <td>${user.tweet_count}</td>
+    <td>${user.like_count}</td>
+    <td>
+      ${user.is_admin ? "" : `
+        <form action="/admin/users/${user.id}" method="post">
+          <input type="hidden" name="_method" value="delete" />
+          <input type="hidden" name="_csrf_token" value="${escapeHtml(csrfToken)}" />
+          <button class="btn btn-sm btn-ghost text-error" type="submit">削除</button>
+        </form>
+      `}
+    </td>
+  </tr>
+`).join("")
+
+const initAdminRefresh = () => {
+  const dashboard = document.querySelector("[data-admin-dashboard]")
+  if (!dashboard) return
+
+  withPolling(async () => {
+    const [stats, users, scheduled] = await Promise.all([
+      fetchJson(dashboard.dataset.statsUrl),
+      fetchJson(dashboard.dataset.usersUrl),
+      fetchJson(dashboard.dataset.scheduledUrl),
+    ])
+
+    document.querySelector("[data-admin-total-tweets]").textContent = stats.totals.tweet_count
+    document.querySelector("[data-admin-total-likes]").textContent = stats.totals.like_count
+
+    const scheduledBody = document.querySelector("[data-admin-scheduled-body]")
+    if (scheduledBody) scheduledBody.innerHTML = renderAdminScheduledRows(scheduled.scheduled_tweets)
+
+    const usersBody = document.querySelector("[data-admin-users-body]")
+    if (usersBody) usersBody.innerHTML = renderAdminUserRows(users.users || [])
+  })
+}
+
+const initAsyncLikeForms = () => {
+  if (window.__tubuyakiAsyncForms) return
+  window.__tubuyakiAsyncForms = true
+
+  document.addEventListener("submit", async event => {
+    const form = event.target
+    if (!(form instanceof HTMLFormElement)) return
+
+    const actionPath = new URL(form.action).pathname
+    const methodOverride = form.querySelector("input[name='_method']")?.value?.toLowerCase()
+    const isCreateTweet = actionPath === "/tweet" && methodOverride !== "delete"
+    const isDeleteTweet = actionPath.match(/^\/tweet\/\d+$/) && methodOverride === "delete"
+    const isLikeTweet = actionPath.match(/^\/tweet\/\d+\/like$/)
+
+    if (!isCreateTweet && !isDeleteTweet && !isLikeTweet) return
+
+    event.preventDefault()
+
+    const button = form.querySelector("button[type='submit']")
+    if (button) button.disabled = true
+
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {"accept": "text/html"},
+      })
+
+      if (!response.ok) {
+        HTMLFormElement.prototype.submit.call(form)
+        return
+      }
+
+      if (isCreateTweet) form.reset()
+
+      const feed = document.querySelector("[data-tweet-feed='true']")
+      if (feed) await refreshTweetFeed(feed)
+    } catch (_error) {
+      HTMLFormElement.prototype.submit.call(form)
+    } finally {
+      if (button) button.disabled = false
+    }
+  })
+}
+
+const initDynamicRefresh = () => {
+  stopDynamicRefresh()
+  initTweetFeedRefresh()
+  initAccountRefresh()
+  initAdminRefresh()
+  initAsyncLikeForms()
+}
+
+document.addEventListener("DOMContentLoaded", initDynamicRefresh)
+window.addEventListener("pageshow", initDynamicRefresh)
+window.addEventListener("phx:page-loading-stop", initDynamicRefresh)
+
+if (document.readyState !== "loading") initDynamicRefresh()
+
 // The lines below enable quality of life phoenix_live_reload
 // development features:
 //
@@ -80,4 +391,3 @@ if (process.env.NODE_ENV === "development") {
     window.liveReloader = reloader
   })
 }
-

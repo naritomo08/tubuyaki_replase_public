@@ -10,14 +10,19 @@
       <a class="btn btn-ghost" href={~p"/tweet"}>戻る</a>
     </header>
 
-    <section class="grid gap-3 sm:grid-cols-2">
+    <section
+      class="grid gap-3 sm:grid-cols-2"
+      data-account-dashboard
+      data-stats-url={~p"/account/stats"}
+      data-scheduled-url={~p"/account/scheduled-tweets"}
+    >
       <div class="rounded-lg border border-base-300 bg-base-100 p-4">
         <p class="text-sm text-base-content/60">あなたの投稿</p>
-        <p class="text-3xl font-bold">{@stats.tweet_count}</p>
+        <p class="text-3xl font-bold" data-account-tweet-count>{@stats.tweet_count}</p>
       </div>
       <div class="rounded-lg border border-base-300 bg-base-100 p-4">
         <p class="text-sm text-base-content/60">もらったいいね</p>
-        <p class="text-3xl font-bold">{@stats.like_count}</p>
+        <p class="text-3xl font-bold" data-account-like-count>{@stats.like_count}</p>
       </div>
     </section>
 
@@ -32,7 +37,7 @@
               <th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody data-account-scheduled-body>
             <tr :if={@scheduled_tweets == []}>
               <td colspan="3" class="text-base-content/60">予約投稿はありません。</td>
             </tr>
