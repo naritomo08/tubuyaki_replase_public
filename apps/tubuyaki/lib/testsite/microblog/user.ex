@@ -10,10 +10,12 @@ defmodule Testsite.Microblog.User do
     field :current_password, :string, virtual: true, redact: true
     field :password_hash, :string, redact: true
     field :email_verified_at, :utc_datetime
+    field :receives_notification_mail, :boolean, default: true
     field :google_id, :string
     field :google_email, :string
     field :google_avatar, :string
     field :google_connected_at, :utc_datetime
+    field :deletion_requested_at, :utc_datetime
     field :tweets_count, :integer, virtual: true, default: 0
     field :received_likes_count, :integer, virtual: true, default: 0
 
@@ -25,7 +27,7 @@ defmodule Testsite.Microblog.User do
 
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:name, :email, :is_admin])
+    |> cast(attrs, [:name, :email, :is_admin, :receives_notification_mail])
     |> validate_required([:name, :email])
     |> validate_length(:name, min: 1, max: 40)
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)
@@ -44,7 +46,7 @@ defmodule Testsite.Microblog.User do
 
   def profile_changeset(user, attrs) do
     user
-    |> cast(attrs, [:name, :email])
+    |> cast(attrs, [:name, :email, :receives_notification_mail])
     |> validate_required([:name, :email])
     |> validate_length(:name, min: 1, max: 40)
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)

@@ -61,7 +61,10 @@ defmodule Testsite.Accounts do
   end
 
   def update_profile(%User{} = user, attrs) do
-    attrs = normalize_email(attrs)
+    attrs =
+      attrs
+      |> normalize_email()
+      |> normalize_checkbox("receives_notification_mail")
 
     user
     |> User.profile_changeset(attrs)
@@ -102,6 +105,12 @@ defmodule Testsite.Accounts do
     end
   end
 
+  def mark_user_for_deletion(%User{} = user) do
+    user
+    |> Ecto.Changeset.change(deletion_requested_at: DateTime.utc_now(:second))
+    |> Repo.update()
+  end
+
   def hash_password(password) do
     salt = :crypto.strong_rand_bytes(@salt_bytes)
 
@@ -131,6 +140,14 @@ defmodule Testsite.Accounts do
       nil -> nil
       email -> email |> String.trim() |> String.downcase()
     end)
+  end
+
+  defp normalize_checkbox(attrs, key) do
+    if Map.has_key?(attrs, key) do
+      Map.put(attrs, key, Map.get(attrs, key) in [true, "true", "1", 1, "on"])
+    else
+      attrs
+    end
   end
 
   defp maybe_mark_first_user_admin(attrs) do

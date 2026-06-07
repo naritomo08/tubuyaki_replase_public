@@ -11,7 +11,8 @@ defmodule TestsiteWeb.AccountController do
     render(conn, :index,
       profile_form: Phoenix.Component.to_form(User.profile_changeset(user, %{})),
       password_form: Phoenix.Component.to_form(%{}, as: :password_update),
-      stats: Microblog.user_stats(user)
+      stats: Microblog.user_stats(user),
+      scheduled_tweets: Microblog.list_scheduled_tweets(user)
     )
   end
 
@@ -29,7 +30,8 @@ defmodule TestsiteWeb.AccountController do
         render(conn, :index,
           profile_form: Phoenix.Component.to_form(%{changeset | action: :update}),
           password_form: Phoenix.Component.to_form(%{}, as: :password_update),
-          stats: Microblog.user_stats(user)
+          stats: Microblog.user_stats(user),
+          scheduled_tweets: Microblog.list_scheduled_tweets(user)
         )
     end
   end
@@ -50,7 +52,8 @@ defmodule TestsiteWeb.AccountController do
           profile_form: Phoenix.Component.to_form(User.profile_changeset(user, %{})),
           password_form:
             Phoenix.Component.to_form(%{changeset | action: :update}, as: :password_update),
-          stats: Microblog.user_stats(user)
+          stats: Microblog.user_stats(user),
+          scheduled_tweets: Microblog.list_scheduled_tweets(user)
         )
     end
   end
@@ -66,7 +69,7 @@ defmodule TestsiteWeb.AccountController do
         put_flash(conn, :error, "パスワードが違います。") |> redirect(to: ~p"/account")
 
       true ->
-        Accounts.delete_user(user)
+        Accounts.mark_user_for_deletion(user)
 
         conn
         |> UserAuth.log_out_user()

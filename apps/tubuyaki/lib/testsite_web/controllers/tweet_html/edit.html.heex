@@ -10,6 +10,29 @@
     <section class="rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm">
       <.form for={@form} action={~p"/tweet/#{@tweet.id}"} method="put" multipart class="space-y-3">
         <.input field={@form[:content]} type="textarea" label="本文" />
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="label cursor-pointer justify-start gap-3 rounded border border-base-300 px-3 py-2">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm"
+              name="tweet[is_secret]"
+              value="1"
+              checked={@tweet.is_secret}
+            />
+            <span class="label-text">秘密投稿にする</span>
+          </label>
+          <label class="label cursor-pointer justify-start gap-3 rounded border border-base-300 px-3 py-2">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm"
+              name="tweet[is_protected]"
+              value="1"
+              checked={@tweet.is_protected}
+            />
+            <span class="label-text">保護する</span>
+          </label>
+        </div>
+        <.input field={@form[:scheduled_at]} type="datetime-local" label="予約日時" />
         <div>
           <label class="label" for="tweet_images">画像を追加</label>
           <input

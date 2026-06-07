@@ -7,7 +7,8 @@ defmodule TestsiteWeb.AdminUserController do
     render(conn, :index,
       users: Accounts.list_users_with_stats(),
       total_tweets: Microblog.count_tweets(),
-      total_likes: Microblog.total_like_count()
+      total_likes: Microblog.total_like_count(),
+      scheduled_tweets: Microblog.list_scheduled_tweets(:all)
     )
   end
 

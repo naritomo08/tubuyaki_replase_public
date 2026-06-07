@@ -8,11 +8,24 @@ defmodule TestsiteWeb.TweetController do
 
     render(conn, :index,
       tweets: Microblog.list_tweets(page, conn.assigns.current_user),
-      total_count: Microblog.count_tweets(),
+      total_count: Microblog.count_tweets(conn.assigns.current_user),
       form: Phoenix.Component.to_form(Microblog.change_tweet(%Testsite.Microblog.Tweet{})),
-      page: page
+      page: page,
+      query: params["q"] || ""
     )
   end
+
+  def search(conn, %{"q" => query}) do
+    render(conn, :index,
+      tweets: Microblog.search_tweets(query, conn.assigns.current_user),
+      total_count: Microblog.count_tweets(conn.assigns.current_user),
+      form: Phoenix.Component.to_form(Microblog.change_tweet(%Testsite.Microblog.Tweet{})),
+      page: "1",
+      query: query
+    )
+  end
+
+  def search(conn, _params), do: redirect(conn, to: ~p"/tweet")
 
   def create(conn, %{"tweet" => tweet_params}) do
     case Microblog.create_tweet(tweet_params, conn.assigns.current_user) do
@@ -26,9 +39,10 @@ defmodule TestsiteWeb.TweetController do
         |> put_status(:unprocessable_entity)
         |> render(:index,
           tweets: Microblog.list_tweets("1", conn.assigns.current_user),
-          total_count: Microblog.count_tweets(),
+          total_count: Microblog.count_tweets(conn.assigns.current_user),
           form: Phoenix.Component.to_form(%{changeset | action: :insert}),
-          page: "1"
+          page: "1",
+          query: ""
         )
     end
   end

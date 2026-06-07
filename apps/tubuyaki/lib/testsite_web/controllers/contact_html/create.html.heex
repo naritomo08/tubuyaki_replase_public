@@ -1,0 +1,27 @@
+<Layouts.flash_group flash={@flash} />
+
+<main class="min-h-screen bg-base-200 px-4 py-6">
+  <div class="mx-auto max-w-2xl">
+    <header class="mb-5 flex items-center justify-between border-b border-base-300 pb-5">
+      <div>
+        <p class="text-sm font-semibold text-secondary">Contact</p>
+        <h1 class="text-3xl font-bold">お問い合わせ</h1>
+      </div>
+      <a class="btn btn-ghost" href={~p"/tweet"}>戻る</a>
+    </header>
+
+    <section class="rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm">
+      <.form for={@form} action={~p"/contact"} class="space-y-3">
+        <.input
+          field={@form[:subject]}
+          label="件名"
+          placeholder="例: アカウントについて"
+        />
+        <.input field={@form[:message]} type="textarea" label="内容" required />
+        <div class="flex justify-end">
+          <button class="btn btn-primary" type="submit">送信</button>
+        </div>
+      </.form>
+    </section>
+  </div>
+</main>

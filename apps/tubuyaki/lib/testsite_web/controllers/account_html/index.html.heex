@@ -22,10 +22,45 @@
     </section>
 
     <section class="rounded-lg border border-base-300 bg-base-100 p-4">
+      <h2 class="mb-3 text-xl font-bold">予約投稿</h2>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>内容</th>
+              <th>予約日時</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :if={@scheduled_tweets == []}>
+              <td colspan="3" class="text-base-content/60">予約投稿はありません。</td>
+            </tr>
+            <tr :for={tweet <- @scheduled_tweets}>
+              <td class="max-w-sm truncate">{tweet.content}</td>
+              <td>{format_datetime(tweet.scheduled_at)}</td>
+              <td><a class="btn btn-sm btn-ghost" href={~p"/tweet/#{tweet.id}/edit"}>編集</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rounded-lg border border-base-300 bg-base-100 p-4">
       <h2 class="mb-3 text-xl font-bold">プロフィール</h2>
       <.form for={@profile_form} action={~p"/account/profile"} method="put" class="space-y-3">
         <.input field={@profile_form[:name]} label="ユーザー名" required />
         <.input field={@profile_form[:email]} type="email" label="メールアドレス" required />
+        <label class="label cursor-pointer justify-start gap-3 rounded border border-base-300 px-3 py-2">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            name="user[receives_notification_mail]"
+            value="1"
+            checked={@conn.assigns.current_user.receives_notification_mail}
+          />
+          <span class="label-text">通知メールを受け取る</span>
+        </label>
         <button class="btn btn-primary" type="submit">保存</button>
       </.form>
     </section>

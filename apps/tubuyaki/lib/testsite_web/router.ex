@@ -28,6 +28,9 @@ defmodule TestsiteWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/terms", LegalDocumentController, :terms
+    get "/privacy", LegalDocumentController, :privacy
+    get "/health", PageController, :health
     get "/tweet", TweetController, :index
     get "/login", AuthController, :new
     post "/login", AuthController, :create
@@ -40,11 +43,15 @@ defmodule TestsiteWeb.Router do
     pipe_through [:browser, :authenticated]
 
     post "/tweet", TweetController, :create
+    get "/tweet/search", TweetController, :search
+    get "/tweet/search/results", TweetController, :search
     get "/tweet/:id/edit", TweetController, :edit
     put "/tweet/:id", TweetController, :update
     delete "/tweet/:id", TweetController, :delete
     post "/tweet/:id/like", TweetController, :like
     get "/verify-email", AuthController, :verify_email
+    get "/contact", ContactController, :create
+    post "/contact", ContactController, :store
     get "/account", AccountController, :index
     put "/account/profile", AccountController, :update_profile
     put "/account/password", AccountController, :update_password

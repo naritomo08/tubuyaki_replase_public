@@ -4,6 +4,9 @@ defmodule Testsite.Microblog.Tweet do
 
   schema "tweets" do
     field :content, :string
+    field :is_secret, :boolean, default: false
+    field :is_protected, :boolean, default: false
+    field :scheduled_at, :utc_datetime
     field :like_count, :integer, virtual: true, default: 0
     field :liked_by_demo_user, :boolean, virtual: true, default: false
 
@@ -19,7 +22,7 @@ defmodule Testsite.Microblog.Tweet do
 
   def changeset(tweet, attrs) do
     tweet
-    |> cast(attrs, [:content, :user_id])
+    |> cast(attrs, [:content, :user_id, :is_secret, :is_protected, :scheduled_at])
     |> validate_required([:content, :user_id])
     |> validate_length(:content, min: 1, max: 255)
     |> foreign_key_constraint(:user_id)

@@ -1,0 +1,36 @@
+<Layouts.flash_group flash={@flash} />
+
+<main class="min-h-screen bg-base-200 px-4 py-6">
+  <article class="mx-auto max-w-3xl rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
+    <div class="mb-6 flex items-center justify-between gap-4 border-b border-base-300 pb-4">
+      <div>
+        <p class="text-sm font-semibold text-secondary">Legal</p>
+        <h1 class="text-3xl font-bold">プライバシーポリシー</h1>
+      </div>
+      <a class="btn btn-ghost" href={~p"/tweet"}>戻る</a>
+    </div>
+
+    <div class="space-y-5 leading-7">
+      <section>
+        <h2 class="mb-2 text-xl font-bold">取得する情報</h2>
+        <p>
+          ユーザー名、メールアドレス、パスワードハッシュ、投稿内容、画像、いいね情報をアプリ機能の提供に必要な範囲で保存します。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-2 text-xl font-bold">利用目的</h2>
+        <p>
+          取得した情報は、ログイン、投稿表示、アカウント管理、管理者による運用確認のために利用します。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-2 text-xl font-bold">削除</h2>
+        <p>
+          退会操作を行うとアカウントは削除予定として扱われ、公開一覧から非表示になります。実運用では保存期間や完全削除手順を別途定めてください。
+        </p>
+      </section>
+    </div>
+  </article>
+</main>

@@ -20,7 +20,11 @@ defmodule Testsite.Microblog do
 
     tweets =
       Tweet
-      |> order_by([t], desc: t.inserted_at, desc: t.id)
+      |> visible_to(current_user)
+      |> order_by([t],
+        desc: fragment("COALESCE(?, ?)", t.scheduled_at, t.inserted_at),
+        desc: t.id
+      )
       |> limit(^@per_page)
       |> offset(^offset)
       |> preload([:user, :images])
@@ -29,8 +33,39 @@ defmodule Testsite.Microblog do
     attach_like_state(tweets, current_user && current_user.id)
   end
 
-  def count_tweets do
-    Repo.aggregate(Tweet, :count)
+  def count_tweets(current_user \\ nil) do
+    Tweet
+    |> visible_to(current_user)
+    |> Repo.aggregate(:count)
+  end
+
+  def search_tweets(term, current_user) do
+    pattern = "%#{String.trim(term || "")}%"
+
+    Tweet
+    |> visible_to(current_user)
+    |> where([t, author: u], ilike(t.content, ^pattern) or ilike(u.name, ^pattern))
+    |> order_by([t], desc: fragment("COALESCE(?, ?)", t.scheduled_at, t.inserted_at), desc: t.id)
+    |> preload([:user, :images])
+    |> Repo.all()
+    |> attach_like_state(current_user && current_user.id)
+  end
+
+  def list_scheduled_tweets(%User{} = user) do
+    Tweet
+    |> where([t], t.user_id == ^user.id)
+    |> where([t], not is_nil(t.scheduled_at) and t.scheduled_at > ^DateTime.utc_now(:second))
+    |> order_by([t], asc: t.scheduled_at)
+    |> preload([:user])
+    |> Repo.all()
+  end
+
+  def list_scheduled_tweets(:all) do
+    Tweet
+    |> where([t], not is_nil(t.scheduled_at) and t.scheduled_at > ^DateTime.utc_now(:second))
+    |> order_by([t], asc: t.scheduled_at)
+    |> preload([:user])
+    |> Repo.all()
   end
 
   def get_tweet!(id) do
@@ -167,7 +202,79 @@ defmodule Testsite.Microblog do
       |> Map.get("content", Map.get(attrs, :content, ""))
       |> String.trim()
 
-    Map.put(attrs, "content", content)
+    attrs
+    |> Map.put("content", content)
+    |> normalize_checkbox("is_secret")
+    |> normalize_checkbox("is_protected")
+    |> normalize_scheduled_at()
+  end
+
+  defp visible_to(query, %User{is_admin: true}) do
+    query
+    |> exclude_deleted_users()
+    |> published_or_scheduled_owner(nil, true)
+  end
+
+  defp visible_to(query, %User{} = user) do
+    query
+    |> exclude_deleted_users()
+    |> published_or_scheduled_owner(user.id, false)
+    |> where([t], t.is_secret == false or t.user_id == ^user.id)
+  end
+
+  defp visible_to(query, nil) do
+    query
+    |> exclude_deleted_users()
+    |> published_or_scheduled_owner(nil, false)
+    |> where([t], t.is_secret == false)
+  end
+
+  defp exclude_deleted_users(query) do
+    query
+    |> join(:inner, [t], u in assoc(t, :user), as: :author)
+    |> where([author: u], is_nil(u.deletion_requested_at))
+  end
+
+  defp published_or_scheduled_owner(query, _user_id, true), do: query
+
+  defp published_or_scheduled_owner(query, nil, false) do
+    now = DateTime.utc_now(:second)
+    where(query, [t], is_nil(t.scheduled_at) or t.scheduled_at <= ^now)
+  end
+
+  defp published_or_scheduled_owner(query, user_id, false) do
+    now = DateTime.utc_now(:second)
+    where(query, [t], is_nil(t.scheduled_at) or t.scheduled_at <= ^now or t.user_id == ^user_id)
+  end
+
+  defp normalize_checkbox(attrs, key) do
+    Map.put(attrs, key, Map.get(attrs, key) in [true, "true", "1", 1, "on"])
+  end
+
+  defp normalize_scheduled_at(attrs) do
+    scheduled_at =
+      attrs
+      |> Map.get("scheduled_at", Map.get(attrs, :scheduled_at))
+      |> parse_datetime()
+
+    Map.put(attrs, "scheduled_at", scheduled_at)
+  end
+
+  defp parse_datetime(nil), do: nil
+  defp parse_datetime(""), do: nil
+  defp parse_datetime(%DateTime{} = datetime), do: datetime
+  defp parse_datetime(%NaiveDateTime{} = datetime), do: DateTime.from_naive!(datetime, "Etc/UTC")
+
+  defp parse_datetime(value) when is_binary(value) do
+    value = String.trim(value)
+
+    with {:error, _} <- DateTime.from_iso8601(value),
+         {:ok, naive_datetime} <- NaiveDateTime.from_iso8601(value <> ":00") do
+      DateTime.from_naive!(naive_datetime, "Etc/UTC")
+    else
+      {:ok, datetime, _offset} -> datetime
+      _ -> nil
+    end
   end
 
   defp save_images(_tweet, []), do: :ok

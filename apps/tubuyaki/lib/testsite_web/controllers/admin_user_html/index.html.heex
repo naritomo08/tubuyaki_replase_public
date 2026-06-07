@@ -21,6 +21,33 @@
       </div>
     </section>
 
+    <section class="mb-5 overflow-x-auto rounded-lg border border-base-300 bg-base-100">
+      <div class="border-b border-base-300 p-4">
+        <h2 class="text-xl font-bold">予約投稿一覧</h2>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ユーザー</th>
+            <th>内容</th>
+            <th>予約日時</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :if={@scheduled_tweets == []}>
+            <td colspan="4" class="text-base-content/60">予約投稿はありません。</td>
+          </tr>
+          <tr :for={tweet <- @scheduled_tweets}>
+            <td>{tweet.user.name}</td>
+            <td class="max-w-md truncate">{tweet.content}</td>
+            <td>{format_datetime(tweet.scheduled_at)}</td>
+            <td><a class="btn btn-sm btn-ghost" href={~p"/tweet/#{tweet.id}/edit"}>編集</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <section class="overflow-x-auto rounded-lg border border-base-300 bg-base-100">
       <table class="table">
         <thead>

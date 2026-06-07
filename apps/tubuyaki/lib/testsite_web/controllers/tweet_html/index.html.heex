@@ -14,6 +14,7 @@
             {@conn.assigns.current_user.name}
           </span>
           <a class="btn btn-sm btn-ghost" href={~p"/account"}>アカウント</a>
+          <a class="btn btn-sm btn-ghost" href={~p"/contact"}>お問い合わせ</a>
           <a
             :if={@conn.assigns.current_user.is_admin}
             class="btn btn-sm btn-ghost"
@@ -33,6 +34,20 @@
         <Layouts.theme_toggle />
       </div>
     </header>
+
+    <section class="mb-5 rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm">
+      <form action={~p"/tweet/search"} method="get" class="flex flex-col gap-2 sm:flex-row">
+        <input
+          class="input flex-1"
+          type="search"
+          name="q"
+          value={@query}
+          placeholder="投稿内容またはユーザー名で検索"
+        />
+        <button class="btn btn-primary" type="submit">検索</button>
+        <a :if={@query != ""} class="btn btn-ghost" href={~p"/tweet"}>解除</a>
+      </form>
+    </section>
 
     <%= if @conn.assigns.current_user do %>
       <section class="mb-5 rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm">
@@ -54,6 +69,27 @@
               accept="image/*"
             />
           </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="label cursor-pointer justify-start gap-3 rounded border border-base-300 px-3 py-2">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                name="tweet[is_secret]"
+                value="1"
+              />
+              <span class="label-text">秘密投稿にする</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3 rounded border border-base-300 px-3 py-2">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                name="tweet[is_protected]"
+                value="1"
+              />
+              <span class="label-text">保護する</span>
+            </label>
+          </div>
+          <.input field={@form[:scheduled_at]} type="datetime-local" label="予約日時" />
           <div class="flex justify-end">
             <button class="btn btn-primary" type="submit">投稿</button>
           </div>
@@ -80,6 +116,11 @@
                     </span>
                     <span class="text-xs text-base-content/50">
                       {format_datetime(tweet.inserted_at)}
+                    </span>
+                    <span :if={tweet.is_secret} class="badge badge-warning badge-sm">秘密</span>
+                    <span :if={tweet.is_protected} class="badge badge-info badge-sm">保護</span>
+                    <span :if={tweet.scheduled_at} class="badge badge-outline badge-sm">
+                      予約 {format_datetime(tweet.scheduled_at)}
                     </span>
                   </div>
                   <p class="whitespace-pre-wrap break-words leading-7">{tweet.content}</p>
@@ -132,5 +173,11 @@
         </ul>
       <% end %>
     </section>
+
+    <footer class="mt-6 flex flex-wrap justify-center gap-4 text-sm text-base-content/60">
+      <a class="link-hover" href={~p"/terms"}>利用規約</a>
+      <a class="link-hover" href={~p"/privacy"}>プライバシーポリシー</a>
+      <a :if={@conn.assigns.current_user} class="link-hover" href={~p"/contact"}>お問い合わせ</a>
+    </footer>
   </div>
 </main>
